@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "House Cup"
+description = "A multi-tenant tournament management platform for schools and organizers to publish games, configure houses, register players, and celebrate leaderboard standings."
+version = "1.0.0"
+id = "artifacts/tournament-platform"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23895
+
+[services.development]
+run = "pnpm --filter @workspace/tournament-platform run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tournament-platform", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/tournament-platform/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23895"
+BASE_PATH = "/"

@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: house-cup-api
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/house_cup?createDatabaseIfNotExist=true&serverTimezone=UTC}
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  jackson:
+    property-naming-strategy: LOWER_CAMEL_CASE
+server:
+  port: ${PORT:8080}
+  servlet:
+    context-path: /api
+
+logging:
+  level:
+    com.housecup: INFO

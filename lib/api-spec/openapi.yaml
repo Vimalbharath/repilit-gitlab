@@ -1,0 +1,328 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: games
+    description: Global game catalogue
+  - name: organizers
+    description: Organizer and tournament management
+  - name: public-events
+    description: Public organizer event pages and registration
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /games:
+    get:
+      operationId: listGames
+      tags: [games]
+      summary: List supported games
+      responses:
+        "200":
+          description: Supported games
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Game"
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [organizers]
+      summary: Get organizer dashboard summary
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /organizers:
+    post:
+      operationId: createOrganizer
+      tags: [organizers]
+      summary: Create an organizer committee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizerInput"
+      responses:
+        "201":
+          description: Created organizer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Organizer"
+  /organizers/{organizerId}/houses:
+    post:
+      operationId: createHouse
+      tags: [organizers]
+      summary: Create a house for an organizer
+      parameters:
+        - $ref: "#/components/parameters/OrganizerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HouseInput"
+      responses:
+        "201":
+          description: Created house
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/House"
+  /organizers/{organizerId}/tournaments:
+    post:
+      operationId: createTournament
+      tags: [organizers]
+      summary: Schedule a tournament
+      parameters:
+        - $ref: "#/components/parameters/OrganizerId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TournamentInput"
+      responses:
+        "201":
+          description: Created tournament
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tournament"
+  /events/{organizerSlug}:
+    get:
+      operationId: getPublicEvent
+      tags: [public-events]
+      summary: Get an organizer's public event page
+      parameters:
+        - $ref: "#/components/parameters/OrganizerSlug"
+      responses:
+        "200":
+          description: Public event data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicEvent"
+        "404":
+          description: Organizer not found
+  /events/{organizerSlug}/registrations:
+    post:
+      operationId: registerPlayer
+      tags: [public-events]
+      summary: Register a player for a public event
+      parameters:
+        - $ref: "#/components/parameters/OrganizerSlug"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegistrationInput"
+      responses:
+        "201":
+          description: Registration created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Registration"
+  /events/{organizerSlug}/leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [public-events]
+      summary: Get house leaderboard standings
+      parameters:
+        - $ref: "#/components/parameters/OrganizerSlug"
+      responses:
+        "200":
+          description: Leaderboard standings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+components:
+  parameters:
+    OrganizerId:
+      name: organizerId
+      in: path
+      required: true
+      schema:
+        type: number
+    OrganizerSlug:
+      name: organizerSlug
+      in: path
+      required: true
+      schema:
+        type: string
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    Game:
+      type: object
+      required: [id, name, description, rules, minPlayers, maxPlayers, accent]
+      properties:
+        id: { type: number }
+        name: { type: string }
+        description: { type: string }
+        rules: { type: string }
+        minPlayers: { type: number }
+        maxPlayers: { type: number }
+        accent: { type: string }
+    Organizer:
+      type: object
+      required: [id, name, slug, tagline, logoInitials, eventDate, status]
+      properties:
+        id: { type: number }
+        name: { type: string }
+        slug: { type: string }
+        tagline: { type: string }
+        logoInitials: { type: string }
+        eventDate: { type: string }
+        status: { type: string }
+    OrganizerInput:
+      type: object
+      required: [name, tagline, eventDate]
+      properties:
+        name: { type: string, minLength: 2 }
+        tagline: { type: string, minLength: 2 }
+        eventDate: { type: string, minLength: 8 }
+    House:
+      type: object
+      required: [id, name, color, points, playerCount]
+      properties:
+        id: { type: number }
+        name: { type: string }
+        color: { type: string }
+        points: { type: number }
+        playerCount: { type: number }
+    HouseInput:
+      type: object
+      required: [name, color]
+      properties:
+        name: { type: string, minLength: 2 }
+        color: { type: string, minLength: 4 }
+    Tournament:
+      type: object
+      required: [id, name, gameId, gameName, startDate, status, registeredPlayers]
+      properties:
+        id: { type: number }
+        name: { type: string }
+        gameId: { type: number }
+        gameName: { type: string }
+        startDate: { type: string }
+        status: { type: string }
+        registeredPlayers: { type: number }
+    TournamentInput:
+      type: object
+      required: [name, gameId, startDate]
+      properties:
+        name: { type: string, minLength: 2 }
+        gameId: { type: number }
+        startDate: { type: string, minLength: 8 }
+    Registration:
+      type: object
+      required: [id, playerName, email, houseId, houseName, tournamentId, tournamentName, registeredAt]
+      properties:
+        id: { type: number }
+        playerName: { type: string }
+        email: { type: string }
+        houseId: { type: number }
+        houseName: { type: string }
+        tournamentId: { type: number }
+        tournamentName: { type: string }
+        registeredAt: { type: string }
+    RegistrationInput:
+      type: object
+      required: [playerName, email, houseId, tournamentId]
+      properties:
+        playerName: { type: string, minLength: 2 }
+        email: { type: string, minLength: 3 }
+        houseId: { type: number }
+        tournamentId: { type: number }
+    LeaderboardEntry:
+      type: object
+      required: [rank, houseId, houseName, color, points, playerCount, trend]
+      properties:
+        rank: { type: number }
+        houseId: { type: number }
+        houseName: { type: string }
+        color: { type: string }
+        points: { type: number }
+        playerCount: { type: number }
+        trend: { type: string }
+    DashboardSummary:
+      type: object
+      required: [organizer, games, houses, tournaments, recentRegistrations]
+      properties:
+        organizer:
+          $ref: "#/components/schemas/Organizer"
+        games:
+          type: array
+          items:
+            $ref: "#/components/schemas/Game"
+        houses:
+          type: array
+          items:
+            $ref: "#/components/schemas/House"
+        tournaments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tournament"
+        recentRegistrations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Registration"
+    PublicEvent:
+      type: object
+      required: [organizer, games, houses, tournaments, recentRegistrations]
+      properties:
+        organizer:
+          $ref: "#/components/schemas/Organizer"
+        games:
+          type: array
+          items:
+            $ref: "#/components/schemas/Game"
+        houses:
+          type: array
+          items:
+            $ref: "#/components/schemas/House"
+        tournaments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tournament"
+        recentRegistrations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Registration"
+
