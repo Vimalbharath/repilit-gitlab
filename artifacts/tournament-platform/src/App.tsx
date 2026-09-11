@@ -21,6 +21,9 @@ import {
   Trophy,
   Users,
   X,
+  Lock,
+  UserCheck,
+  Settings,
 } from 'lucide-react';
 import {
   getGetDashboardSummaryQueryKey,
@@ -55,6 +58,8 @@ import NotFound from '@/pages/not-found';
 import './index.css';
 
 const queryClient = new QueryClient();
+
+type UserRole = 'public' | 'organizer' | 'root';
 
 const sampleGames: Game[] = [
   { id: 1, name: 'Rocket League', description: 'Boost, rotate, and read the field.', rules: '3v3 • Best of 3', minPlayers: 6, maxPlayers: 24, accent: '#eb6944' },
@@ -262,7 +267,7 @@ function GameCard({ game, index }: { game: Game; index: number }) {
   return <div className="card-lift group rounded-2xl border border-[#e4d9c9] bg-[#f7f2e7] p-5" data-testid={`card-game-${game.id}`}><div className="flex items-start justify-between"><span className="font-mono text-[10px] text-[#7d8892]">0{index + 1}</span><span className="h-3 w-3 rounded-full" style={{ backgroundColor: game.accent }} /></div><Gamepad2 size={25} className="mt-9 text-[#182c49] transition-transform group-hover:rotate-6" /><h3 className="mt-5 font-display text-xl font-bold tracking-[-.04em] text-[#182c49]">{game.name}</h3><p className="mt-2 min-h-12 text-sm leading-5 text-[#687583]">{game.description}</p><p className="mt-5 border-t border-[#e4d9c9] pt-4 font-mono text-[10px] uppercase tracking-wide text-[#7d8892]">{game.rules}</p></div>;
 }
 
-function Dashboard() {
+function Dashboard({ role }: { role: UserRole }) {
   const summaryQuery = useGetDashboardSummary({ query: { queryKey: getGetDashboardSummaryQueryKey() } });
   const gamesQuery = useListGames({ query: { queryKey: getListGamesQueryKey() } });
   const summary = normalizeDashboard(summaryQuery.data);
@@ -286,6 +291,27 @@ function Dashboard() {
         <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="font-mono text-xs uppercase tracking-[.2em] text-[#ef7047]">good morning, committee</p><h1 className="mt-2 font-display text-4xl font-extrabold tracking-[-.06em] text-[#182c49] md:text-5xl">{organizer.name}</h1><p className="mt-2 text-sm text-[#687583]">{organizer.tagline}</p></div><div className="flex gap-2"><Button variant="secondary" onClick={() => setModal('organizer')} testId="button-edit-organizer"><Plus size={16} /> New organizer</Button><Button onClick={() => setModal('tournament')} testId="button-create-tournament"><Plus size={16} /> Schedule tournament</Button></div></div>
         {(summaryQuery.isError || gamesQuery.isError) && <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e7b6a7] bg-[#fbe3dd] px-4 py-3 text-sm text-[#8e3c2a]" data-testid="status-dashboard-error"><span className="flex items-center gap-2"><CircleDot size={14} /> Live data is taking a breather. Showing the last-ready workspace.</span><button className="inline-flex items-center gap-1 font-bold" onClick={() => { void summaryQuery.refetch(); void gamesQuery.refetch(); }} data-testid="button-retry-dashboard"><RefreshCw size={14} /> Retry</button></div>}
         {notice && <div className="mt-5 flex items-center justify-between rounded-xl border border-[#b6d8d8] bg-[#d9eeee] px-4 py-3 text-sm font-semibold text-[#163e50] page-in" data-testid="status-dashboard-success"><span className="flex items-center gap-2"><Check size={16} /> {notice}</span><button onClick={() => setNotice('')} data-testid="button-dismiss-notice"><X size={15} /></button></div>}
+        
+        {role === 'root' && (
+          <div className="mt-6 rounded-2xl border-2 border-dashed border-[#ef7047] bg-[#fffaf0] p-5 page-in">
+            <div className="flex items-center gap-2 text-[#ef7047] font-bold text-sm">
+              <Settings size={18} />
+              <span>AWS Root User Console (Super Admin Mode)</span>
+            </div>
+            <p className="mt-2 text-xs text-[#526273]">
+              You are logged in with root privileges. You can manage system-wide configurations, view raw telemetry, and override any organizer settings.
+            </p>
+            <div className="mt-4 flex gap-2">
+              <button onClick={() => alert('System state reset successfully!')} className="rounded-lg bg-[#182c49] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#ef7047] transition-colors">
+                Reset Global Database
+              </button>
+              <button onClick={() => alert('Telemetry logs downloaded.')} className="rounded-lg border border-[#e4d9c9] px-3 py-1.5 text-xs font-bold text-[#182c49] hover:bg-[#eee8da] transition-colors">
+                Download Telemetry Logs
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard label="Players registered" value={summary.tournaments.reduce((sum, t) => sum + t.registeredPlayers, 0)} note="+12 this week" icon={<Users size={19} />} accent="orange" />
           <StatCard label="Tournaments" value={summary.tournaments.length} note={`${summary.tournaments.filter((t) => t.status === 'open').length} open for sign-up`} icon={<ClipboardList size={19} />} accent="teal" />
@@ -390,7 +416,7 @@ function RegistrationForm({ event, isPending, onRegister }: { event: PublicEvent
   const [tournamentId, setTournamentId] = useState(String(openTournaments[0]?.id ?? ''));
   const [error, setError] = useState('');
   const submit = (e: React.FormEvent) => { e.preventDefault(); if (playerName.trim().length < 2 || !email.includes('@') || !houseId || !tournamentId) { setError('Fill in your name, a valid email, house, and game.'); return; } setError(''); onRegister({ playerName, email, houseId: Number(houseId), tournamentId: Number(tournamentId) }); };
-  return <form onSubmit={submit} className="mt-7 space-y-4"><label className="block"><span className="mb-2 block text-xs font-bold text-[#aec0c8]">Your name</span><input value={playerName} onChange={(e) => setPlayerName(e.target.value)} placeholder="First and last name" className="w-full rounded-xl border border-white/15 bg-white/8 px-4 py-3 text-sm text-[#fff8eb] outline-none placeholder:text-[#708999] focus:border-[#ef7047] focus:ring-2 focus:ring-[#ef7047]/20" data-testid="input-player-name" /></label><label className="block"><span className="mb-2 block text-xs font-bold text-[#aec0c8]">Email address</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Where should we send details?" className="w-full rounded-xl border border-white/15 bg-white/8 px-4 py-3 text-sm text-[#fff8eb] outline-none placeholder:text-[#708999] focus:border-[#ef7047] focus:ring-2 focus:ring-[#ef7047]/20" data-testid="input-player-email" /></label><div className="grid gap-4 sm:grid-cols-2"><label className="block"><span className="mb-2 block text-xs font-bold text-[#aec0c8]">Your house</span><select value={houseId} onChange={(e) => setHouseId(e.target.value)} className="select-reset w-full rounded-xl border border-white/15 bg-[#223957] px-4 py-3 text-sm text-[#fff8eb] outline-none focus:border-[#ef7047]" data-testid="select-player-house">{event.houses.map((house) => <option value={house.id} key={house.id}>{house.name}</option>)}</select></label><label className="block"><span className="mb-2 block text-xs font-bold text-[#aec0c8]">Your game</span><select value={tournamentId} onChange={(e) => setTournamentId(e.target.value)} className="select-reset w-full rounded-xl border border-white/15 bg-[#223957] px-4 py-3 text-sm text-[#fff8eb] outline-none focus:border-[#ef7047]" data-testid="select-player-tournament">{openTournaments.map((tournament) => <option value={tournament.id} key={tournament.id}>{tournament.gameName}</option>)}</select></label></div>{error && <p className="rounded-lg bg-[#ef7047]/15 px-3 py-2 text-xs font-semibold text-[#ffd5c6]" data-testid="status-registration-error">{error}</p>}<Button type="submit" disabled={isPending} className="mt-2 w-full py-3.5" testId="button-register-player">{isPending ? 'Adding you to the board…' : 'Register me to play'} <ArrowRight size={16} /></Button><p className="text-center text-[10px] text-[#708999]">No account needed. Your committee will only use this for event details.</p></form>;
+  return <form onSubmit={submit} className="mt-7 space-y-4"><label className="block"><span className="mb-2 block text-xs font-bold text-[#aec0c8]">Your name</span><input value={playerName} onChange={(e) => setPlayerName(e.target.value)} placeholder="First and last name" className="w-full rounded-xl border border-white/15 bg-white/8 px-4 py-3 text-sm text-[#fff8eb] outline-none placeholder:text-[#708999] focus:border-[#ef7047] focus:ring-2 focus:ring-[#ef7047]/20" data-testid="input-player-name" /></label><label className="block"><span className="mb-2 block text-xs font-bold text-[#aec0c8]">Email address</span><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Where should we send details?" className="w-full rounded-xl border border-white/15 bg-white/8 px-4 py-3 text-sm text-[#fff8eb] outline-none placeholder:text-[#708999] focus:border-[#ef7047] focus:ring-2 focus:ring-[#ef7047]/20" data-testid="input-player-email" /></label><div className="grid gap-4 sm:grid-cols-2"><label className="block"><span className="mb-2 block text-xs font-bold text-[#aec0c8]">Your house</span><select value={houseId} onChange={(e) => setHouseId(e.target.value)} className="select-reset w-full rounded-xl border border-white/15 bg-[#223957] px-4 py-3 text-sm text-[#fff8eb] outline-none focus:border-[#ef7047]" data-testid="select-player-house">{event.houses.map((house) => <option value={house.id} key={house.id}>{house.name}</option>)}</select></label><label className="block"><span className="mb-2 block text-xs font-bold text-[#aec0c8]">Your game</span><select value={tournamentId} onChange={(e) => setTournamentId(e.target.value)} className="select-reset w-full rounded-xl border border-white/15 bg-[#223957] px-4 py-3 text-sm text-[#fff8eb] outline-none focus:border-[#ef7047]" data-testid="select-player-tournament">{openTournaments.map((tournament) => <option value={tournament.id} key={tournament.id}>{tournament.gameName}</option>)}</select></label></div>{error && <p className="rounded-lg bg-[#ef7047]/15 px-3 py-2 text-xs font-semibold text-[#ffd5c6]" data-testid="status-registration-error">{error}</p><Button type="submit" disabled={isPending} className="mt-2 w-full py-3.5" testId="button-register-player">{isPending ? 'Adding you to the board…' : 'Register me to play'} <ArrowRight size={16} /></Button><p className="text-center text-[10px] text-[#708999]">No account needed. Your committee will only use this for event details.</p></form>;
 }
 
 function LeaderboardPage() {
@@ -408,12 +434,83 @@ function RoutedErrorBoundary({ children }: { children: React.ReactNode }) {
   return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
 }
 
-function Router() {
-  return <RoutedErrorBoundary><Switch><Route path="/" component={Home} /><Route path="/dashboard" component={Dashboard} /><Route path="/events/:organizerSlug/leaderboard" component={LeaderboardPage} /><Route path="/events/:organizerSlug" component={PublicEventPage} /><Route component={NotFound} /></Switch></RoutedErrorBoundary>;
+function AccessDenied() {
+  return (
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#f7f2e7] p-6 text-center">
+      <div className="grid h-16 w-16 place-items-center rounded-2xl bg-[#fbe3dd] text-[#ef7047] mb-6">
+        <Lock size={32} />
+      </div>
+      <h1 className="font-display text-3xl font-extrabold text-[#182c49] tracking-tight">Access Denied</h1>
+      <p className="mt-3 max-w-md text-sm text-[#526273] leading-relaxed">
+        You are currently logged in as a <strong>Normal Public User</strong>. Only registered Organisers or AWS Root Users can access the committee workspace.
+      </p>
+      <div className="mt-6 flex gap-3">
+        <Link href="/"><Button variant="secondary">Back to Home</Button></Link>
+      </div>
+    </div>
+  );
+}
+
+function Router({ role }: { role: UserRole }) {
+  return (
+    <RoutedErrorBoundary>
+      <Switch>
+        <Route path="/" component={Home} />
+        <Route path="/dashboard">
+          {role === 'public' ? <AccessDenied /> : <Dashboard role={role} />}
+        </Route>
+        <Route path="/events/:organizerSlug/leaderboard" component={LeaderboardPage} />
+        <Route path="/events/:organizerSlug" component={PublicEventPage} />
+        <Route component={NotFound} />
+      </Switch>
+    </RoutedErrorBoundary>
+  );
 }
 
 function App() {
-  return <QueryClientProvider client={queryClient}><TooltipProvider><WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}><Router /></WouterRouter><Toaster /></TooltipProvider></QueryClientProvider>;
+  const [role, setRole] = useState<UserRole>('organizer');
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        {/* Simulated Authentication Control Bar */}
+        <div className="bg-[#182c49] text-white text-xs py-2 px-4 flex flex-wrap items-center justify-between gap-2 border-b border-white/10 relative z-50">
+          <div className="flex items-center gap-2">
+            <UserCheck size={14} className="text-[#ef7047]" />
+            <span className="font-semibold">Simulated Auth Role:</span>
+            <span className="font-mono uppercase bg-white/10 px-1.5 py-0.5 rounded text-[#91c9c9]">
+              {role === 'root' ? 'AWS Root User (Super Admin)' : role}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setRole('public')}
+              className={`px-2.5 py-1 rounded font-bold transition-all ${role === 'public' ? 'bg-[#ef7047] text-white' : 'bg-white/5 text-white/70 hover:bg-white/10'}`}
+            >
+              Public User
+            </button>
+            <button
+              onClick={() => setRole('organizer')}
+              className={`px-2.5 py-1 rounded font-bold transition-all ${role === 'organizer' ? 'bg-[#ef7047] text-white' : 'bg-white/5 text-white/70 hover:bg-white/10'}`}
+            >
+              Organiser
+            </button>
+            <button
+              onClick={() => setRole('root')}
+              className={`px-2.5 py-1 rounded font-bold transition-all ${role === 'root' ? 'bg-[#ef7047] text-white' : 'bg-white/5 text-white/70 hover:bg-white/10'}`}
+            >
+              AWS Root User
+            </button>
+          </div>
+        </div>
+
+        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+          <Router role={role} />
+        </WouterRouter>
+        <Toaster />
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
 }
 
 export default App;
