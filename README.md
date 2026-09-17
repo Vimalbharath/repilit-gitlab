@@ -1,46 +1,73 @@
 # Tournament Platform & House Cup Management System
 
-This repository contains a complete Tournament Platform and House Cup Management System. It allows organizers to run game tournaments, register players into different Houses (teams), and track points on a live leaderboard.
-
-## Repository Structure
-
-* **artifacts/tournament-platform**: React frontend application.
-* **artifacts/mockup-sandbox**: Vite-based sandbox for UI component mockups.
-* **artifacts/api-server**: Node.js mock API server for frontend development.
-* **backend/tournament-api**: Java Spring Boot backend application.
-* **lib/api-client-react**: Generated React API client.
-* **lib/api-zod**: Generated Zod validation schemas.
+This repository has been streamlined to focus on the core **Spring Boot Backend** and **React Frontend** applications.
 
 ---
 
-## Why is the Repository Large (~30 MB)?
+## Step 1: Switch to a Clean Branch and Remove Unwanted Files
 
-The repository contains committed Eclipse IDE workspace metadata under `backend/.metadata/`. These files contain local IDE history, indexes, and plugin states which are not part of the source code and should not be tracked.
+To keep your repository clean and lightweight, run these commands in your terminal to switch to a new branch and remove the unwanted mockup sandbox, mock API server, and Eclipse metadata from Git tracking:
 
-### How to clean up your local repository:
-To reclaim space in your local Git history, run the following commands in your terminal:
 ```bash
-# Remove the Eclipse metadata directory from Git tracking without deleting local files
-git rm -r --cached backend/.metadata
+# 1. Create and switch to a new branch
+git checkout -b feature/clean-setup
 
-# Commit the change
-git commit -m "chore: remove eclipse metadata from git tracking"
+# 2. Remove unwanted directories from Git tracking (keeps local files intact)
+git rm -r --cached backend/.metadata
+git rm -r --cached artifacts/mockup-sandbox
+git rm -r --cached artifacts/api-server
+
+# 3. Commit the cleanup
+git commit -m "chore: clean up repository and keep only core backend and frontend"
 ```
 
 ---
 
-## Connecting the Frontend to the Spring Boot Backend
+## Step 2: Running the Spring Boot Backend
 
-Currently, the frontend is configured to point to the mock API server (`artifacts/api-server`). To connect the React frontend to the live Spring Boot backend:
+The backend is a Java Spring Boot application located in `backend/tournament-api`.
 
-1. **Verify Backend Port**:
-   The Spring Boot application runs on `http://localhost:8080` by default.
-   
-2. **Configure Frontend Environment**:
-   In `artifacts/tournament-platform`, create or update your `.env` or configuration file to point to the Spring Boot API:
-   ```env
-   VITE_API_BASE_URL=http://localhost:8080
+1. **Navigate to the backend directory**:
+   ```bash
+   cd backend/tournament-api
    ```
 
-3. **CORS Configuration**:
-   The Spring Boot controller `TournamentController.java` is already annotated with `@CrossOrigin`, which allows the React frontend (typically running on `http://localhost:5173` or similar) to make API requests without CORS issues.
+2. **Run the application**:
+   ```bash
+   mvn spring-boot:run
+   ```
+   The backend will start on `http://localhost:8080` with the context path `/api`.
+
+---
+
+## Step 3: Running the React Frontend
+
+The frontend is a React application located in `artifacts/tournament-platform`.
+
+1. **Navigate to the frontend directory**:
+   ```bash
+   cd artifacts/tournament-platform
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Configure the API Endpoint**:
+   Create a `.env` file in `artifacts/tournament-platform/` to point directly to your Spring Boot backend:
+   ```env
+   VITE_API_BASE_URL=http://localhost:8080/api
+   ```
+
+4. **Start the development server**:
+   ```bash
+   npm run dev
+   ```
+
+---
+
+## How It Works Together
+
+- **CORS Support**: The Spring Boot controller `TournamentController.java` is annotated with `@CrossOrigin`, allowing the React frontend to communicate with the backend without security blocks.
+- **Database Seeding**: On startup, the Spring Boot backend automatically seeds initial data (games, houses, and tournaments) if the database is empty, so you can immediately see data on the frontend.
