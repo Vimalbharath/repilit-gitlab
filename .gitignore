@@ -56,3 +56,4 @@ release.properties
 .cache/
 .local/
 .aider*
+backend/.metadata/
